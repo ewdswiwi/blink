@@ -158,6 +158,136 @@ h1 span {
     padding: 18px 20px;
   }
 
+.auth-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(135deg, #ffffff, #eef8ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 24px;
+  left: 6%;
+  border: 0;
+  background: transparent;
+  color: #5d6873;
+  font-weight: 600;
+}
+
+.auth-card {
+  width: min(100%, 430px);
+  padding: 42px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #dceef9;
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(98, 176, 225, 0.12);
+}
+
+.auth-logo {
+  color: #75c5f5;
+  font-size: 25px;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+.auth-card h1 {
+  font-size: 34px;
+  letter-spacing: -1.5px;
+  margin: 0 0 8px;
+}
+
+.auth-card > p {
+  color: #727d87;
+  margin: 0 0 28px;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 25px;
+  background: #f1f8fc;
+  border-radius: 12px;
+}
+
+.auth-tabs button {
+  border: 0;
+  background: transparent;
+  padding: 11px;
+  border-radius: 9px;
+  font-weight: 600;
+}
+
+.auth-tabs .active-tab {
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.auth-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #d5e4ec;
+  border-radius: 11px;
+  outline: none;
+  font: inherit;
+}
+
+.auth-card input:focus {
+  border-color: #75c5f5;
+}
+
+.auth-submit {
+  margin-top: 6px;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #a9dcff;
+  color: #10202d;
+  font-weight: 700;
+}
+
+.forgot-button {
+  display: block;
+  margin: 18px auto 0;
+  border: 0;
+  background: transparent;
+  color: #5799c5;
+  font-size: 13px;
+}
+
+@media (max-width: 500px) {
+  .auth-page {
+    padding: 20px;
+  }
+
+  .auth-card {
+    padding: 30px 22px;
+  }
+
+  .back-button {
+    left: 20px;
+  }
+}
+  
   .header-actions .login-button {
     display: none;
   }
