@@ -1,14 +1,32 @@
-import "./index.css";
+import { useState } from "react";
+import Auth from "./Auth";
 
 export default function App() {
+  const [showAuth, setShowAuth] = useState(false);
+
+  if (showAuth) {
+    return <Auth onBack={() => setShowAuth(false)} />;
+  }
+
   return (
     <div className="app">
       <header className="landing-header">
         <div className="logo">𖦹 blink</div>
 
         <div className="header-actions">
-          <button className="login-button">Log in</button>
-          <button className="signup-button">Sign up</button>
+          <button
+            className="login-button"
+            onClick={() => setShowAuth(true)}
+          >
+            Log in
+          </button>
+
+          <button
+            className="signup-button"
+            onClick={() => setShowAuth(true)}
+          >
+            Sign up
+          </button>
         </div>
       </header>
 
@@ -28,8 +46,16 @@ export default function App() {
           </p>
 
           <div className="hero-actions">
-            <button className="primary-button">Create an account</button>
-            <button className="guest-button">Continue as guest</button>
+            <button
+              className="primary-button"
+              onClick={() => setShowAuth(true)}
+            >
+              Create an account
+            </button>
+
+            <button className="guest-button">
+              Continue as guest
+            </button>
           </div>
         </div>
 
