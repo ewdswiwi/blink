@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { supabase } from "./supabase";
 
 export default function Auth({ onBack }) {
   const [mode, setMode] = useState("login");
@@ -10,17 +11,13 @@ export default function Auth({ onBack }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const isSignup = mode === "signup";
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setMessage("");
-
-    if (!email.trim() || !password) {
-      setMessage("Please fill in all required fields.");
-      return;
-    }
 
     if (isSignup && !username.trim()) {
       setMessage("Please choose a username.");
@@ -37,11 +34,60 @@ export default function Auth({ onBack }) {
       return;
     }
 
-    setMessage(
-      isSignup
-        ? "Your form is ready! Account connection is coming next."
-        : "Your form is ready! Login connection is coming next."
-    );
+    setLoading(true);
+
+    try {
+      if (isSignup) {
+        const cleanUsername = username.trim().toLowerCase();
+
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              username: cleanUsername,
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.user && data.session) {
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .insert({
+              id: data.user.id,
+              username: cleanUsername,
+            });
+
+          if (profileError) {
+            setMessage(
+              "Your account was created, but your profile could not be saved. Please contact support."
+            );
+            return;
+          }
+
+          setMessage("Account created! Welcome to Blink.");
+        } else {
+          setMessage(
+            "Account created! Please check your email to confirm your account."
+          );
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) throw error;
+
+        setMessage("Welcome back! You are logged in.");
+      }
+    } catch (error) {
+      setMessage(error.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function switchMode(nextMode) {
@@ -96,6 +142,7 @@ export default function Auth({ onBack }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                required
               />
             </label>
           )}
@@ -128,7 +175,6 @@ export default function Auth({ onBack }) {
                 type="button"
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
@@ -154,9 +200,6 @@ export default function Auth({ onBack }) {
                   onClick={() =>
                     setShowConfirmPassword(!showConfirmPassword)
                   }
-                  aria-label={
-                    showConfirmPassword ? "Hide password" : "Show password"
-                  }
                 >
                   {showConfirmPassword ? "Hide" : "Show"}
                 </button>
@@ -170,8 +213,12 @@ export default function Auth({ onBack }) {
             </p>
           )}
 
-          <button className="auth-submit" type="submit">
-            {isSignup ? "Create account" : "Log in"}
+          <button className="auth-submit" type="submit" disabled={loading}>
+            {loading
+              ? "Please wait..."
+              : isSignup
+                ? "Create account"
+                : "Log in"}
           </button>
         </form>
 
@@ -179,9 +226,22 @@ export default function Auth({ onBack }) {
           <button
             type="button"
             className="forgot-button"
-            onClick={() =>
-              setMessage("Password recovery will be connected next.")
-            }
+            onClick={async () => {
+              if (!email.trim()) {
+                setMessage("Enter your email address first.");
+                return;
+              }
+
+              const { error } = await supabase.auth.resetPasswordForEmail(
+                email.trim()
+              );
+
+              setMessage(
+                error
+                  ? error.message
+                  : "Password reset instructions have been sent if the account exists."
+              );
+            }}
           >
             Forgot password?
           </button>
@@ -189,4 +249,4 @@ export default function Auth({ onBack }) {
       </section>
     </main>
   );
-                    }
+               }
