@@ -4,33 +4,54 @@ import { supabase } from "./supabase";
 
 export default function Auth({ onBack }) {
   const [mode, setMode] = useState("login");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
 
   const isSignup = mode === "signup";
+
+  function notify(text, type = "info") {
+    setMessage(text);
+    setMessageType(type);
+  }
+
+  function switchMode(nextMode) {
+    setMode(nextMode);
+    setMessage("");
+    setPassword("");
+    setConfirmPassword("");
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setMessage("");
 
-    if (isSignup && !username.trim()) {
-      setMessage("Please choose a username.");
-      return;
-    }
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = username.trim().toLowerCase();
 
-    if (isSignup && password !== confirmPassword) {
-      setMessage("Your passwords do not match.");
-      return;
+    if (isSignup) {
+      if (!/^[a-z0-9_]{3,20}$/.test(cleanUsername)) {
+        notify(
+          "Username must be 3–20 characters and contain only letters, numbers or underscores.",
+          "error"
+        );
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        notify("Your passwords do not match.", "error");
+        return;
+      }
     }
 
     if (password.length < 8) {
-      setMessage("Your password must be at least 8 characters.");
+      notify("Your password must be at least 8 characters.", "error");
       return;
     }
 
@@ -38,63 +59,70 @@ export default function Auth({ onBack }) {
 
     try {
       if (isSignup) {
-        const cleanUsername = username.trim().toLowerCase();
-
         const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
+          email: cleanEmail,
           password,
           options: {
             data: {
               username: cleanUsername,
+              display_name: cleanUsername,
             },
           },
         });
 
         if (error) throw error;
 
-        if (data.user && data.session) {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .insert({
-              id: data.user.id,
-              username: cleanUsername,
-            });
-
-          if (profileError) {
-            setMessage(
-              "Your account was created, but your profile could not be saved. Please contact support."
-            );
-            return;
-          }
-
-          setMessage("Account created! Welcome to Blink.");
+        if (data.session) {
+          notify("Your account is ready. Welcome to Blink!", "success");
         } else {
-          setMessage(
-            "Account created! Please check your email to confirm your account."
+          notify(
+            "Account created! Please check your email to confirm your address.",
+            "success"
           );
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: cleanEmail,
           password,
         });
 
         if (error) throw error;
 
-        setMessage("Welcome back! You are logged in.");
+        notify("Welcome back!", "success");
       }
     } catch (error) {
-      setMessage(error.message || "Something went wrong. Please try again.");
+      notify(error.message || "Something went wrong.", "error");
     } finally {
       setLoading(false);
     }
   }
 
-  function switchMode(nextMode) {
-    setMode(nextMode);
+  async function handlePasswordReset() {
     setMessage("");
-    setShowPassword(false);
-    setShowConfirmPassword(false);
+
+    if (!email.trim()) {
+      notify("Enter your email address first.", "error");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase()
+      );
+
+      if (error) throw error;
+
+      notify(
+        "If an account exists for this email, password reset instructions will be sent.",
+        "success"
+      );
+    } catch (error) {
+      notify(error.message || "Could not send the reset email.", "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -108,7 +136,7 @@ export default function Auth({ onBack }) {
 
         <h1>{isSignup ? "Create your account" : "Welcome to Blink"}</h1>
 
-        <p>
+        <p className="auth-intro">
           {isSignup
             ? "Your own little corner of the internet starts here."
             : "Log in and pick up where you left off."}
@@ -142,8 +170,12 @@ export default function Auth({ onBack }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                maxLength={20}
                 required
               />
+              <span className="field-hint">
+                3–20 characters · letters, numbers and underscores
+              </span>
             </label>
           )}
 
@@ -186,7 +218,7 @@ export default function Auth({ onBack }) {
               Confirm password
               <div className="password-field">
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showConfirm ? "text" : "password"}
                   placeholder="Enter your password again"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -197,18 +229,16 @@ export default function Auth({ onBack }) {
                 <button
                   type="button"
                   className="password-toggle"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
+                  onClick={() => setShowConfirm(!showConfirm)}
                 >
-                  {showConfirmPassword ? "Hide" : "Show"}
+                  {showConfirm ? "Hide" : "Show"}
                 </button>
               </div>
             </label>
           )}
 
           {message && (
-            <p className="auth-message" role="status">
+            <p className={`auth-message ${messageType}`} role="status">
               {message}
             </p>
           )}
@@ -226,22 +256,8 @@ export default function Auth({ onBack }) {
           <button
             type="button"
             className="forgot-button"
-            onClick={async () => {
-              if (!email.trim()) {
-                setMessage("Enter your email address first.");
-                return;
-              }
-
-              const { error } = await supabase.auth.resetPasswordForEmail(
-                email.trim()
-              );
-
-              setMessage(
-                error
-                  ? error.message
-                  : "Password reset instructions have been sent if the account exists."
-              );
-            }}
+            onClick={handlePasswordReset}
+            disabled={loading}
           >
             Forgot password?
           </button>
@@ -249,4 +265,4 @@ export default function Auth({ onBack }) {
       </section>
     </main>
   );
-               }
+        }
